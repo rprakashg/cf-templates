@@ -1,8 +1,8 @@
 # s3-for-static-website-hosting-with-cf
-This template can be used to host a static website generated using hugo or jekyll. Template provisions an S3 bucket configured for static website hosting where the content can be stored as well as a cloudfront distribution configured with S3 Origin and creates a bucket policy on the S3 bucket to grant read only rights to content stored in S3 bucket for Cloud front Origin Access Identity (OAI). Additionally template also provisions a hosted zone for the web site domain and creates a DNS A Record to map to cloudfront distribution 
+This template can be used to provision resources required to host a static website generated using hugo or jekyll. Template provisions an S3 bucket where the web site content can be stored and configures it for static website hosting as well as a cloudfront distribution configured with S3 Origin and creates a bucket policy on the S3 bucket to grant read only rights to content stored in S3 bucket to Cloud front Origin Access Identity (OAI). Additionally template also provisions a Route 53 hosted zone for the web site domain and creates a DNS A Record to map to cloudfront distribution 
 
 ## Parameters
-Follow parameters need to be passed when creating the stack
+Following parameters need to be passed when creating the stack
 
 Parameter Name                      |   Purpose
 ------------------------------      |   -----------------------------------------------------------------------
