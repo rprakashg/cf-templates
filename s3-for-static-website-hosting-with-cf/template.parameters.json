@@ -1,0 +1,17 @@
+{
+    "StackName": "website-hosting",
+    "Parameters": [
+        { "Name": "BucketName", "Value": "rprakashg-io-web" },
+        { "Name": "Domain", "Value": "rprakashg.io" },
+        { "Name": "IndexDocument", "Value": "index.html" },
+        { "Name": "ErrorDocument", "Value": "error.html" },
+        { "Name": "PriceClass", "Value": "PriceClass_200" },
+        { "Name": "OriginAccessIdentity", "Value": "E3I4XPWBMHHQ19" }
+    ],
+    "Tags": [
+        {
+            "Key": "Owner",
+            "Value": "ram.gopinathan"
+        }
+    ]
+}

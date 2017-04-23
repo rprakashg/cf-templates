@@ -1,0 +1,172 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "This template can be used to provision AWS resources required to host a static website and use cloudfront and Route 53 DNS to access the website",
+    "Parameters": {
+        "BucketName": {
+            "Description": "S3 Bucket name",
+            "Type": "String"
+        },
+        "Domain": {
+            "Description": "Domain name for website",
+            "Type": "String"
+        },
+        "IndexDocument": {
+            "Description": "Index document to be used",
+            "Type": "String"
+        },
+        "ErrorDocument": {
+            "Description": "Error document to be used",
+            "Type": "String"
+        },
+        "PriceClass": {
+            "Description": "Cloudfront Price class, valid values PriceClass_All, PriceClass_100, PriceClass_200",
+            "Type": "String",
+            "AllowedValues": [
+                "PriceClass_All",
+                "PriceClass_100",
+                "PriceClass_200"
+            ]
+        },
+        "OriginAccessIdentity": {
+            "Description": "Cloudfront Origin Access Identity",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "ContentStorage": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Ref": "BucketName"
+                },
+                "WebsiteConfiguration": {
+                    "IndexDocument": { "Ref": "IndexDocument" },
+                    "ErrorDocument": { "Ref": "ErrorDocument" }
+                }
+            },
+            "DeletionPolicy": "Retain"
+        },
+        "ContentDelivery": {
+            "Type" : "AWS::CloudFront::Distribution",
+            "Properties": {
+                "DistributionConfig" : {
+                    "Origins": [{
+                        "DomainName": { "Fn::GetAtt": ["ContentStorage", "DomainName"]},
+                        "Id": { "Fn::Join": ["", [
+                            { "Ref": "BucketName" },
+                            "-S3Origin"
+                        ]]},
+                        "S3OriginConfig": {
+                            "OriginAccessIdentity" : { "Fn::Join": ["", [
+                                "origin-access-identity/cloudfront/",
+                                { "Ref": "OriginAccessIdentity" }
+                            ]]}
+                        }
+                    }],
+                    "Enabled" : "true",
+                    "Comment" : "Web content distribution",
+                    "DefaultRootObject" : { "Ref": "IndexDocument" },
+                    "Aliases": [
+                        { "Ref": "Domain" }
+                    ],
+                    "DefaultCacheBehavior" : {
+                        "AllowedMethods": [
+                            "DELETE", "GET", "HEAD", "OPTIONS", "PATCH", "POST", "PUT"
+                        ],
+                        "TargetOriginId" : { "Fn::Join": ["", [
+                            { "Ref": "BucketName" },
+                            "-S3Origin"
+                        ]]},
+                        "ForwardedValues" : {
+                            "QueryString" : "true",
+                            "Cookies" : { "Forward" : "none" }
+                        },
+                        "ViewerProtocolPolicy" : "allow-all"
+                    },
+                    "PriceClass" : { "Ref": "PriceClass" },
+                    "ViewerCertificate" : { "CloudFrontDefaultCertificate" : "true" } 
+                }
+            },
+            "DependsOn": [
+                "ContentStorage"
+            ]
+        },
+        "DnsRecords": {
+            "Type" : "AWS::Route53::RecordSetGroup",
+            "Properties" : {
+                "HostedZoneId" : { "Ref" : "Zone" },
+                "Comment" : "DNS Records for hosted zone",
+                "RecordSets": [
+                    {
+                        "Name" : { "Ref": "Domain" },
+                        "Type" : "A",
+                        "AliasTarget": {
+                            "HostedZoneId": "Z2FDTNDATAQYW2",
+                            "DNSName": { "Fn::GetAtt": [ "ContentDelivery", "DomainName" ] }
+                        }
+                    }
+                ]
+
+            },
+            "DependsOn": [
+                "Zone"
+            ]
+        },
+        "Zone": {
+            "Type": "AWS::Route53::HostedZone",
+            "Properties": {
+                "Name": { "Ref": "Domain" },
+                "HostedZoneConfig": {
+                    "Comment": { "Fn::Join": ["", [
+                        "Hosted zone for - ", 
+                        { "Ref": "Domain" }
+                    ]]}
+                }
+            }
+        },
+        "OriginAccessIdentityBucketPolicy": {
+            "Type": "AWS::S3::BucketPolicy",
+            "Properties": {
+                "Bucket": {"Ref": "BucketName" },
+                "PolicyDocument": {
+                    "Statement": {
+                        "Action": [
+                            "s3:GetObject"
+                        ],
+                        "Effect": "Allow",
+                        "Principal": {
+                            "AWS": [
+                                { "Fn::Join": [" ", [
+                                    "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity",
+                                    { "Ref": "OriginAccessIdentity" }
+                                ]]}
+                            ]
+                        },
+                        "Resource": [
+                            { "Fn::Join": ["", [
+                                "arn:aws:s3:::",
+                                { "Ref": "BucketName" },
+                                "/*"
+                            ]]}
+                        ],
+                        "Sid": "originidentityaccesspolicy"
+                    }
+                }
+            },
+            "DependsOn": [
+                "ContentStorage",
+                "ContentDelivery"
+            ]
+        }
+    },
+    "Outputs" : {
+        "CDNUrl" : {
+            "Value": { "Fn::Join" : [ "", ["http://", {"Fn::GetAtt" : ["ContentDelivery", "DomainName"]} ]]},
+            "Description": "The URL of the newly created website"
+        },
+        "S3Url": {
+            "Value" : { "Fn::GetAtt": ["ContentStorage", "DomainName" ]},
+            "Description" : "Name of S3 bucket to hold website content"
+        }
+  }
+}
