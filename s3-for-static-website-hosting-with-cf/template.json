@@ -30,6 +30,10 @@
         "OriginAccessIdentity": {
             "Description": "Cloudfront Origin Access Identity",
             "Type": "String"
+        },
+        "UserName": {
+            "Description": "Build user",
+            "Type": "String"
         }
     },
     "Resources": {
@@ -157,9 +161,49 @@
                 "ContentStorage",
                 "ContentDelivery"
             ]
+        },
+        "BuildUser": {
+            "Type" : "AWS::IAM::User",
+            "Properties" : {
+                "UserName": { "Ref": "UserName" },
+                "Policies": [{
+                    "PolicyName" : "s3accessonly",
+                    "PolicyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [{
+                            "Effect": "Allow",
+                            "Action": [
+                                "s3:GetObject",
+                                "s3:PutObject",
+                                "s3:ListBucket",
+                                "s3:DeleteObject"
+                            ],
+                            "Resource": [{
+                                "Fn::Join": ["", [
+                                    "arn:aws:s3:::",
+                                    { "Ref": "BucketName" },
+                                    "/*"
+                                ]]
+                            }]
+                        }]
+                    }
+                }]
+            },
+            "DependsOn": [
+                "ContentStorage"
+            ]
+        },
+        "BuildUserAccessKey": {
+            "Type": "AWS::IAM::AccessKey",
+            "Properties" : {
+                "UserName" : { "Ref": "UserName" }
+            },
+            "DependsOn": [
+                "BuildUser"
+            ]
         }
     },
-    "Outputs" : {
+    "Outputs": {
         "CDNUrl" : {
             "Value": { "Fn::Join" : [ "", ["http://", {"Fn::GetAtt" : ["ContentDelivery", "DomainName"]} ]]},
             "Description": "The URL of the newly created website"
@@ -168,5 +212,5 @@
             "Value" : { "Fn::GetAtt": ["ContentStorage", "DomainName" ]},
             "Description" : "Name of S3 bucket to hold website content"
         }
-  }
+    }
 }

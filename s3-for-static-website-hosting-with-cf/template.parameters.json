@@ -6,7 +6,8 @@
         { "Name": "IndexDocument", "Value": "index.html" },
         { "Name": "ErrorDocument", "Value": "error.html" },
         { "Name": "PriceClass", "Value": "PriceClass_200" },
-        { "Name": "OriginAccessIdentity", "Value": "E3I4XPWBMHHQ19" }
+        { "Name": "OriginAccessIdentity", "Value": "E3I4XPWBMHHQ19" },
+        { "Name": "UserName", "Value": "svc_build_user" }
     ],
     "Tags": [
         {
