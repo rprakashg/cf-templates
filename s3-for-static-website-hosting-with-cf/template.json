@@ -170,22 +170,40 @@
                     "PolicyName" : "s3accessonly",
                     "PolicyDocument": {
                         "Version": "2012-10-17",
-                        "Statement": [{
-                            "Effect": "Allow",
-                            "Action": [
-                                "s3:GetObject",
-                                "s3:PutObject",
-                                "s3:ListBucket",
-                                "s3:DeleteObject"
-                            ],
-                            "Resource": [{
-                                "Fn::Join": ["", [
-                                    "arn:aws:s3:::",
-                                    { "Ref": "BucketName" },
-                                    "/*"
-                                ]]
-                            }]
-                        }]
+                        "Statement": [
+                            {
+                                "Action": [
+                                    "s3:ListAllMyBuckets"
+                                ],
+                                "Effect": "Allow",
+                                "Resource": "arn:aws:s3:::*"
+                            },
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "s3:GetObject",
+                                    "s3:PutObject",
+                                    "s3:PutObjectAcl",
+                                    "s3:ListBucket",
+                                    "s3:DeleteObject"
+                                ],
+                                "Resource": [
+                                    {
+                                        "Fn::Join": ["", [
+                                            "arn:aws:s3:::",
+                                            { "Ref": "BucketName" }
+                                        ]]
+                                    },
+                                    {
+                                        "Fn::Join": ["", [
+                                            "arn:aws:s3:::",
+                                            { "Ref": "BucketName" },
+                                            "/*"
+                                        ]]
+                                    }
+                                ]
+                            }
+                        ]
                     }
                 }]
             },
