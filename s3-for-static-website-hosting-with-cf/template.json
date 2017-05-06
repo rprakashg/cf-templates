@@ -65,7 +65,8 @@
                 "WebsiteConfiguration": {
                     "IndexDocument": { "Ref": "IndexDocument" },
                     "ErrorDocument": { "Ref": "ErrorDocument" }
-                }
+                },
+                "AccessControl": "PublicRead"
             },
             "DeletionPolicy": "Retain"
         },
