@@ -27,10 +27,6 @@
                 "PriceClass_200"
             ]
         },
-        "OriginAccessIdentity": {
-            "Description": "Cloudfront Origin Access Identity",
-            "Type": "String"
-        },
         "UserName": {
             "Description": "Build user",
             "Type": "String"
@@ -141,7 +137,7 @@
                 }
             }
         },
-        "OriginAccessIdentityBucketPolicy": {
+        "ReadOnlyBucketPolicy": {
             "Type": "AWS::S3::BucketPolicy",
             "Properties": {
                 "Bucket": {"Ref": "BucketName" },
@@ -151,14 +147,7 @@
                             "s3:GetObject"
                         ],
                         "Effect": "Allow",
-                        "Principal": {
-                            "AWS": [
-                                { "Fn::Join": [" ", [
-                                    "arn:aws:iam::cloudfront:user/CloudFront Origin Access Identity",
-                                    { "Ref": "OriginAccessIdentity" }
-                                ]]}
-                            ]
-                        },
+                        "Principal": "*",
                         "Resource": [
                             { "Fn::Join": ["", [
                                 "arn:aws:s3:::",
@@ -166,7 +155,7 @@
                                 "/*"
                             ]]}
                         ],
-                        "Sid": "originidentityaccesspolicy"
+                        "Sid": "allowreadonly"
                     }
                 }
             },
