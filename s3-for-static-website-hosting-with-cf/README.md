@@ -11,8 +11,7 @@ Domain                              |   Custom domain name for your website
 IndexDocument                       |   Index document to be used, Default index.html
 ErrorDocument                       |   Error document to be used, Default error.html
 PriceClass                          |   Cloudfront price class "PriceClass_All", "PriceClass_100", "PriceClass_200"
-OriginAccessIdentity                |   Cloudfront origin access identity
-
+UserName                            |   Build User Name (For CI Builds, This user gets full rights to S3 bucket created as well as Cloudfront permissions required for invalidating distribution)
 ## Launching the stack
 Running create-stack.sh script from terminal window will create the stack using the aws cli. Default parameters and stack name is picked up from the template.parameters.json. If you need to change the default values simply edit the template.parameters.json file.
 
