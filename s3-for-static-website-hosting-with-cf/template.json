@@ -169,7 +169,7 @@
             "Properties" : {
                 "UserName": { "Ref": "UserName" },
                 "Policies": [{
-                    "PolicyName" : "s3accessonly",
+                    "PolicyName" : "builduserpolicy",
                     "PolicyDocument": {
                         "Version": "2012-10-17",
                         "Statement": [
@@ -204,6 +204,15 @@
                                         ]]
                                     }
                                 ]
+                            },
+                            {
+                                "Effect": "Allow",
+                                "Action": [
+                                    "cloudfront:CreateInvalidation",
+                                    "cloudfront:GetInvalidation",
+                                    "cloudfront:ListInvalidations"
+                                ],
+                                "Resource": "*"
                             }
                         ]
                     }
