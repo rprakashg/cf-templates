@@ -114,7 +114,7 @@
                         "Name" : { "Ref": "Domain" },
                         "Type" : "A",
                         "AliasTarget": {
-                            "HostedZoneId": "Z2FDTNDATAQYW2",
+                            "HostedZoneId": { "Ref" : "Zone" },
                             "DNSName": { "Fn::GetAtt": [ "ContentDelivery", "DomainName" ] }
                         }
                     }
