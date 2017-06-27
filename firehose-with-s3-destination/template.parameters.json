@@ -1,0 +1,19 @@
+{
+    "StackName": "eos-log-events-ingestion",
+    "Parameters":[
+        {"Name": "StreamName", "Value": "eos-event-log-stream"},
+        {"Name": "S3BucketName", "Value": "eos-event-logs"},
+        {"Name": "CompressionFormat", "Value": "GZIP"},
+        {"Name": "IAMRoleName", "Value": "eos-event-log-stream-access-role"},
+        {"Name": "KMSKeyAlias", "Value": "eos-event-log-data-encryption-key"},
+        {"Name": "KMSAdminUser", "Value": "user/ram.gopinathan"},
+        {"Name": "CloudWatchLogsRetention", "Value": "30"},     
+        {"Name": "CloudWatchLogStreamName", "Value": "S3Delivery"}
+    ],
+    "Tags": [
+        {
+            "Key": "Owner",
+            "Value": "ram.gopinathan"
+        }
+    ]
+}

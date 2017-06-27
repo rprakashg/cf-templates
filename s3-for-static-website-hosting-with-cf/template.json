@@ -238,8 +238,16 @@
             "Description": "The URL of the newly created website"
         },
         "S3Url": {
-            "Value" : { "Fn::GetAtt": ["ContentStorage", "DomainName" ]},
+            "Value": { "Fn::GetAtt": ["ContentStorage", "DomainName" ]},
             "Description" : "Name of S3 bucket to hold website content"
+        },
+        "BuildUserKey": {
+            "Value": { "Ref": "BuildUserAccessKey" },
+            "Description": "Build user access key id"
+        },
+        "BuildUserSecretAccessKey": {
+            "Value": { "Fn::GetAtt": ["BuildUserAccessKey", "SecretAccessKey" ]},
+            "Description": "Build user secret access key"
         }
     }
 }

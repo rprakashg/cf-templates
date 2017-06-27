@@ -1,0 +1,367 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Description": "This template can be used to provision AWS resources required to ingest events from applications in a low latency, high throughput manner and store the events in an S3 bucket for processing",
+    "Parameters": {
+        "StreamName": {
+            "Description": "Name of Kinesis firehose delivery stream for events",
+            "Type": "String"
+        },
+        "S3BucketName": {
+            "Description": "AWS S3 bucket name for storing events",
+            "Type": "String"
+        },
+        "CompressionFormat": {
+            "Description": "Compression format to be used",
+            "Type": "String",
+            "Default": "UNCOMPRESSED",
+            "AllowedValues": [
+                "GZIP",
+                "UNCOMPRESSED",
+                "ZIP",
+                "Snappy"
+            ]
+        },
+        "IAMRoleName": {
+            "Description": "IAM Role to be associated with the Kinesis firehose delivery stream",
+            "Type": "String"
+        },
+        "KMSKeyAlias": {
+            "Description": "Alias to be used for KMS Key",
+            "Type": "String"
+        },
+        "KMSAdminUser": {
+            "Description": "KMS Admin user principal",
+            "Type": "String"
+        },
+        "CloudWatchLogStreamName": {
+            "Description": "Cloud watch log stream to create",
+            "Type": "String"
+        },
+        "CloudWatchLogsRetention": {
+            "Description": "Number of days cloud watch logs should be retained",
+            "Type": "String"
+        }
+    },
+    "Resources": {
+        "EventLogStorage": {
+            "Type": "AWS::S3::Bucket",
+            "Properties": {
+                "BucketName": {
+                    "Ref": "S3BucketName"
+                }
+            }
+        }, 
+        "EventLogEncryptionkey": {
+            "Type": "AWS::KMS::Key",
+            "Properties": {
+                "Description": {
+                    "Fn::Join": [
+                            "",
+                            [
+                                "Encryption key used for encrypting content in ",
+                                { "Ref": "EventLogStorage"}
+                            ]
+                        ]
+                    },
+                "Enabled": true,
+                "EnableKeyRotation": true,
+                "KeyPolicy": {
+                    "Version": "2012-10-17",
+                    "Id": "key-default-1",
+                    "Statement": [
+                        {
+                            "Sid": "Enable IAM User Permissions",
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": [{
+                                    "Fn::Join": [
+                                        ":",
+                                        [
+                                            "arn:aws:iam:",
+                                            {
+                                                "Ref": "AWS::AccountId"
+                                            },
+                                            "root"
+                                        ]
+                                    ]
+                                    }
+                                ]
+                            },
+                            "Action": "kms:*",
+                            "Resource": "*"
+                        },
+                        {
+                            "Sid": "Allow administration of the key",
+                            "Effect": "Allow",
+                            "Principal": { "AWS": [
+                                {
+                                    "Fn::Join": [
+                                    ":",
+                                    [
+                                        "arn:aws:iam:",
+                                        {
+                                            "Ref": "AWS::AccountId"
+                                        },
+                                        {
+                                            "Ref": "KMSAdminUser"
+                                        }
+                                    ]
+                                    ]
+                                }
+                            ]},
+                            "Action": [
+                                "kms:Create*",
+                                "kms:Describe*",
+                                "kms:Enable*",
+                                "kms:List*",
+                                "kms:Put*",
+                                "kms:Update*",
+                                "kms:Revoke*",
+                                "kms:Disable*",
+                                "kms:Get*",
+                                "kms:Delete*",
+                                "kms:ScheduleKeyDeletion",
+                                "kms:CancelKeyDeletion"
+                            ],
+                            "Resource": "*"
+                        },
+                        {
+                            "Sid": "Allow use of the key",
+                            "Effect": "Allow",
+                            "Principal": { "Service": "s3.amazonaws.com" },
+                            "Action": [
+                                "kms:Encrypt",
+                                "kms:Decrypt",
+                                "kms:ReEncrypt*",
+                                "kms:GenerateDataKey*",
+                                "kms:DescribeKey"
+                            ], 
+                            "Resource": { "Ref": "EventLogStorage" }
+                        }  
+                    ]
+                }
+            }
+        },
+        "EventLogEncryptionKeyAlias":{ 
+            "Type": "AWS::KMS::Alias",
+            "Properties": {
+                "AliasName" : {
+                    "Fn::Join": [
+                        "",[
+                            "alias/",
+                            { "Ref": "KMSKeyAlias" }
+                        ]
+                    ]
+                },
+                "TargetKeyId" : {"Ref":"EventLogEncryptionkey"}
+            },
+            "DependsOn": [
+                "EventLogEncryptionkey"
+            ]
+        },
+        "EventLogDeliveryStreamAccessRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "AssumeRolePolicyDocument": {
+                    "Version" : "2012-10-17",
+                    "Statement": [{
+                        "Effect": "Allow",
+                        "Principal": {
+                            "Service": "firehose.amazonaws.com"
+                        },
+                        "Action": "sts:AssumeRole",
+                        "Condition": {
+                            "StringEquals": {
+                                "sts:ExternalId": { "Ref": "AWS::AccountId" }
+                            }
+                        }
+                    }]
+                },
+                "RoleName": { "Ref": "IAMRoleName" },
+                "Policies": [{
+                    "PolicyName": "event-log-deliverystream-access-policy",
+                    "PolicyDocument": {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Sid": "AllowAccessToS3Bucket",
+                                "Effect": "Allow",      
+                                "Action": [        
+                                    "s3:AbortMultipartUpload",        
+                                    "s3:GetBucketLocation",        
+                                    "s3:GetObject",        
+                                    "s3:ListBucket",        
+                                    "s3:ListBucketMultipartUploads",        
+                                    "s3:PutObject"
+                                ],      
+                                "Resource": [        
+                                    { 
+                                        "Fn::Join":[
+                                            "",
+                                            [
+                                                "arn:aws:s3:::", {
+                                                    "Ref": "S3BucketName"
+                                                }
+                                            ]
+                                        ]
+                                    },
+                                    { 
+                                        "Fn::Join":[
+                                            "",
+                                            [
+                                                "arn:aws:s3:::", {
+                                                    "Ref": "S3BucketName"
+                                                },
+                                                "/*"
+                                            ] 
+                                        ]
+                                    }		    
+                                ]    
+                            },
+                            {
+                                "Sid": "AllowAccessToKMSKey",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "kms:Decrypt",
+                                    "kms:GenerateDataKey"
+                                ],
+                                "Resource": [
+                                    {
+                                        "Fn::GetAtt": ["EventLogEncryptionkey", "Arn"]
+                                    }
+                                ],
+                                "Condition": {
+                                    "StringEquals": {
+                                        "kms:ViaService": { 
+                                            "Fn::Join": [
+                                                "",
+                                                [
+                                                    "s3.", 
+                                                    { "Ref": "AWS::Region" }, 
+                                                    ".amazonaws.com"
+                                                ]
+                                            ]
+                                        }
+                                    },
+                                    "StringLike": {
+                                        "kms:EncryptionContext:aws:s3:arn": { 
+                                            "Fn::Join":[
+                                                "",
+                                                [
+                                                    "arn:aws:s3:::", {
+                                                        "Ref": "S3BucketName"
+                                                    },
+                                                    "/*"
+                                                ] 
+                                            ]
+                                        }
+                                    }
+                                } 
+                            },
+                            {
+                                "Sid": "AllowCloudWatchLogging",
+                                "Effect": "Allow",
+                                "Action": [
+                                    "logs:PutLogEvents"
+                                ],
+                                "Resource": [
+                                    { 
+                                        "Fn::Join": [
+                                            "",
+                                            [
+                                                "arn:aws:logs:",
+                                                { "Ref": "AWS::Region" },
+                                                ":",
+                                                { "Ref": "AWS::AccountId"},
+                                                ":log-group:/aws/kinesisfirehose/",
+                                                { "Ref": "StreamName"},
+                                                ":log-stream:*"
+                                            ] 
+                                        ]
+                                    }
+                                ]
+                            }
+                        ]
+                    }
+                }]
+            },
+            "DependsOn": [
+                "EventLogEncryptionkey"
+            ]
+        },
+        "EventLogDeliveryStream": {
+            "Type": "AWS::KinesisFirehose::DeliveryStream",
+            "Properties": {
+                "DeliveryStreamName": {
+                    "Ref": "StreamName"
+                },
+                "S3DestinationConfiguration": {
+                    "BucketARN": { 
+                        "Fn::Join": [
+                            "", [
+                                "arn:aws:s3:::",
+                                { "Ref": "S3BucketName"}    
+                            ]
+                        ]
+                    },
+                    "BufferingHints": {
+                        "IntervalInSeconds": "60",
+                        "SizeInMBs": "50"
+                    },
+                    "CompressionFormat": { "Ref": "CompressionFormat" },
+                    "EncryptionConfiguration": {
+                        "KMSEncryptionConfig": {
+                            "AWSKMSKeyARN": { 
+                                "Fn::GetAtt": [
+                                    "EventLogEncryptionkey", 
+                                    "Arn" 
+                                ]
+                            }
+                        }
+                    },
+                    "Prefix": "/",
+                    "RoleARN": {
+                        "Fn::GetAtt":[
+                            "EventLogDeliveryStreamAccessRole", 
+                            "Arn"
+                        ]
+                    },
+                    "CloudWatchLoggingOptions": {
+                        "Enabled": true,
+                        "LogGroupName": { "Ref": "EventLogGroup" },
+                        "LogStreamName": "S3Delivery"
+                    }
+                }
+            },
+            "DependsOn": [
+                "EventLogStorage",
+                "EventLogEncryptionkey",
+                "EventLogDeliveryStreamAccessRole"
+            ]
+        },
+        "EventLogGroup": {
+            "Type" : "AWS::Logs::LogGroup",
+            "Properties" : {
+                "LogGroupName" : {
+                    "Fn::Join": [
+                        "", [
+                            "/aws/kinesisfirehose/",
+                            { "Ref": "StreamName"}
+                        ]
+                    ]
+                },
+                "RetentionInDays" : { "Ref": "CloudWatchLogsRetention" }
+            }
+        },
+        "EventLogStream": {
+            "Type" : "AWS::Logs::LogStream",
+            "Properties" : {
+                "LogGroupName" : { "Ref": "EventLogGroup" },
+                "LogStreamName" : { "Ref": "CloudWatchLogStreamName" }
+            },
+            "DependsOn": [
+                "EventLogGroup"
+            ]
+        }
+    }    
+}
